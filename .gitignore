@@ -1,0 +1,7 @@
+.idea
+
+dockerdiff
+dockerdiff_linux_386
+dockerdiff_linux_amd64
+dockerdiff_linux_arm
+dockerdiff_linux_arm64
