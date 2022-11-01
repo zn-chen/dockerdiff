@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,12 +29,12 @@ type manifestItem struct {
 func ImageExport(cli *client.Client, ImageID string, dst string) error {
 	responseBody, err := cli.ImageSave(context.Background(), []string{ImageID})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "image save request error")
 	}
 	defer responseBody.Close()
 
 	if err = archive.Untar(responseBody, dst, nil); err != nil {
-		return err
+		return errors.Wrap(err, "decode tar failed")
 	}
 	return nil
 }
@@ -47,7 +48,7 @@ func ImageTar(path string, output io.Writer) error {
 	defer fs.Close()
 
 	if _, err = io.Copy(output, fs); err != nil {
-		return err
+		return errors.Wrap(err, "write to output failed")
 	}
 	return nil
 }
@@ -56,11 +57,11 @@ func ImageTar(path string, output io.Writer) error {
 func DiffExport(cli *client.Client, image1Name string, image2Name string, output io.Writer) error {
 	image1, _, err := cli.ImageInspectWithRaw(context.Background(), image1Name)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "image1 inspect failed")
 	}
 	image2, _, err := cli.ImageInspectWithRaw(context.Background(), image2Name)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "image2 inspect failed")
 	}
 
 	if len(image2.RepoTags) == 0 {
@@ -78,23 +79,23 @@ func DiffExport(cli *client.Client, image1Name string, image2Name string, output
 
 	tmpDir, err := os.MkdirTemp("", "docker-import-")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "create tmp dir failed")
 	}
 	defer os.RemoveAll(tmpDir)
 
 	// 导出image2
 	if err = ImageExport(cli, image2.RepoTags[0], tmpDir); err != nil {
-		return err
+		return errors.Wrap(err, "export image2 failed")
 	}
 
 	manifestFile, err := os.Open(filepath.Join(tmpDir, "manifest.json"))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "read manifest")
 	}
 	defer manifestFile.Close()
 	var manifest []manifestItem
 	if err = json.NewDecoder(manifestFile).Decode(&manifest); err != nil {
-		return err
+		return errors.Wrap(err, "decode manifest")
 	}
 	var layers []string
 	for _, t := range manifest {
@@ -115,7 +116,7 @@ func DiffExport(cli *client.Client, image1Name string, image2Name string, output
 
 	// 压包
 	if err = ImageTar(tmpDir, output); err != nil {
-		return err
+		return errors.Wrapf(err, "tar %s", tmpDir)
 	}
 
 	return nil
