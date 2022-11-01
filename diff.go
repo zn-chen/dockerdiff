@@ -70,7 +70,7 @@ func DiffExport(cli *client.Client, image1Name string, image2Name string, output
 	// 查找重复文件层
 	var duplicateLayer []string
 	for i, l := range image1.RootFS.Layers {
-		if l != image2.RootFS.Layers[i] {
+		if i > len(image2.RootFS.Layers)-1 || l != image2.RootFS.Layers[i] {
 			break
 		}
 		duplicateLayer = append(duplicateLayer, l)
