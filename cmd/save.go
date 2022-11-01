@@ -39,7 +39,7 @@ func DiffExport(image1, image2 string) error {
 	if output == "" {
 		outputStream = os.Stdout
 	} else {
-		if fd, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE, 600); err != nil {
+		if fd, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE, 0644); err != nil {
 			return errors.Wrap(err, "write dst file failed")
 		} else {
 			defer fd.Close()
